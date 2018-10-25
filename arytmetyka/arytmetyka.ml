@@ -7,17 +7,17 @@ type wartosc = { licznik : (float * float); mianownik : (float * float) };;
 
 (*KONSTRUKTORY*)
 let wartosc_dokladnosc x p = 
-	{ licznik = (x - (p*x/100.0), x + (p*x/100.0));
-	   mianownik = (1.0, 1.0)}
+	{ licznik = (x - (p*x/100.), x + (p*x/100.));
+	   mianownik = (1., 1.)}
 	   
-let wartosc_od_do x y = { licznik = (x, y); mianownik = (1.0, 1.0) }
+let wartosc_od_do x y = { licznik = (x, y); mianownik = (1., 1.) }
 
-let wartosc_dokladna x = { licznik = (x, x); mianownik = (1.0, 1.0) }
+let wartosc_dokladna x = { licznik = (x, x); mianownik = (1., 1.) }
 
 (*MODYFIKATORY*)
 
 let odwrotnosc x = { licznik = x.mianownik; mianownik = x.licznik; }
-let przeciwna x = ((-1.0) * fst x, (-1.0) * snd x)
+let przeciwna x = (-.fst x, -.snd x)
 let minek l = List.fold_left min nan l (* wyjasnic dlaczego mozna wziac nan XD *)
 let maxik l = List.fold_left max nan l
 
@@ -33,6 +33,7 @@ let mnoz a b =
 
 (*let x = (mnoz (1.0, 2.0) (3.0, 7.0));;
 print_float (fst x);;
+print_string " ";;
 print_float (snd x);;
 let pom = { licznik = (1.0, 2.0); mianownik = (3.0, 7.0) }*)
 
@@ -55,19 +56,18 @@ let rec przeciecie a b = if fst a < fst b then przeciecie b a else
 
 let in_wartosc w x = przeciecie (mnoz (x, x) w.mianownik) w.licznik
 	
-let min_wartosc w = if ((fst (w.mianownik) < 0.0) && ((snd w.mianownik) > 0.0)) then neg_infinity else 
+let min_wartosc w = if ((fst (w.mianownik) < 0.) && ((snd w.mianownik) > 0.)) then neg_infinity else 
 	let lista = (punktuj w.licznik w.mianownik ( / )) in (*ogarnac fold left bo nan XDDD *)
 minek lista
 	
-let max_wartosc w = (-1.0) * min_wartosc {licznik = przeciwna w.licznik; mianownik = w.mianownik}
+let max_wartosc w = -.min_wartosc {licznik = przeciwna w.licznik; mianownik = w.mianownik}
 	
 let skonczone x = match (classify_float x) with
-	| FP_infinite -> false
-	| FP_nan -> false
+	| FP_infinite | FP_nan -> false
 	| _ -> true
 	
 let sr_wartosc w = 
 	let minimum = min_wartosc w in
 	let maksimum = max_wartosc w in
-	if (skonczone minimum) && (skonczone maksimum) then (minimum + maksimum) / 2.0
+	if (skonczone minimum) || (skonczone maksimum) then (minimum + maksimum) / 2.
 	else nan
