@@ -39,7 +39,7 @@ let pom = { licznik = (1.0, 2.0); mianownik = (3.0, 7.0) }*)
 let razy war1 war2 = 
 	{ licznik = mnoz war1.licznik war2.licznik;
 	  mianownik = mnoz war1.mianownik war2.mianownik }
-	 
+	
 let podzielic war1 war2 = razy war1 (odwrotnosc war2)
 	 
 let plus war1 war2 = 
@@ -71,13 +71,3 @@ let sr_wartosc w =
 	let maksimum = max_wartosc w in
 	if (skonczone minimum) && (skonczone maksimum) then (minimum + maksimum) / 2.0
 	else nan
-	
-
-
-
-
-
-
-
-
- 
