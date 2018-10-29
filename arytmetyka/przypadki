@@ -1,2 +1,2 @@
 <0,0> * <-inf, inf> = <0, 0> 
-
+x = -10 p = 10 assert(min_wartosc = -11)

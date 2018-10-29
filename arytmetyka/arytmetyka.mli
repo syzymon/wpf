@@ -42,4 +42,5 @@ val minus:     wartosc -> wartosc -> wartosc
 val razy:      wartosc -> wartosc -> wartosc  
 val podzielic: wartosc -> wartosc -> wartosc                            
 
-
+(*DEBUG
+val dbg:		wartosc -> unit*)
