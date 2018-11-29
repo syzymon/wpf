@@ -23,7 +23,7 @@ let spec_min x y = (*specjalne minimum dzialajace poprawnie, gdy jednym z argume
 		| (FP_nan, _) -> y
 		| (_, FP_nan) -> x
 		| (_, _) -> min x y
-		
+    	
 let spec_max x y = -.(spec_min (-.x) (-.y)) 
 
 let minek l = List.fold_left spec_min nan l (* jako argument mozna podac nan poniewaz funkcje specjalne go obsluguja *)
