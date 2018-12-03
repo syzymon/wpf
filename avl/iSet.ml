@@ -1,8 +1,44 @@
-type 'k set = (*drzewko*)
+(*Autor: Szymon Tworkowski 406386 Reviewer: Damian Werpachowski 407214*)
+
+(*
+ * ISet - Interval sets
+ * Copyright (C) 1996-2018 Xavier Leroy, Nicolas Cannasse, Markus Mottl, Jacek Chrzaszcz, Szymon Tworkowski
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version,
+ * with the special exception on linking described in file LICENSE.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+(*
+Drzewo AVL: dla kazdego wierzcholka roznica glebokosci lewego i prawego poddrzewa <= 2
+W drzewie trzymamy kolejno:
+lewe poddrzewo, przedzial w wierzcholku, prawe poddrzewo, wysokosc drzewa,
+suma rozmiarow przedzialow w poddrzewie - trzymane jako liczba ujemna ze wzgledu na zakres
+poniewaz -(max_int - min_int + 1) >= Int64.min_int 
+
+Zakladamy, ze kazdy wierzcholek drzewa zawiera jeden przedzial, oraz ze przedzialy 
+w dowolnym poddrzewie sa rozlaczne, ale moga sie stykac np. [1,2] oraz [3,4] 
+moga byc przedzialami roznych wierzcholkow ale [1,3] oraz [2,4] juz nie
+
+Na operacje elementarne skladaja sie funkcje add_one, join oraz split. 
+Ich zlozonosc wynosi O(log n). Wszystkie pozostale operacje wykonujemy
+za pomoca elementarnych lub w widocznym czasie log n lub stalym.
+*)
+type 'k set = 
   | Empty
   | Node of 'k set * 'k * 'k set * int * int64 
-  (*lewe poddrzewo, przedzial w wierzcholku, prawe poddrzewo, czynnik balansu,
-  suma rozmiarow przedzialow w poddrzewie - trzymane jako liczba ujemna ze wzgledu na zakres*)
+
 
 type t = (*typ calego zbioru z komparatorem*)
 {
@@ -14,19 +50,23 @@ let height = function
   | Node (_, _, _, h, _) -> h
   | Empty -> 0
 
-let size = function (*calkowita licznosc sumy przedzialow w poddrzewie*)
+let size = function (*minus calkowita licznosc sumy przedzialow w poddrzewie*)
   | Node (_, _, _, _, s) -> s
   | Empty -> Int64.zero
 
-let len (a, b) = (*zwraca liczbe przeciwna do dlugosci przedzialu (a,b)*)
+let len (a, b) = (*minus liczba elementow przedzialu [a,b] w calkowitych*)
   let nA = Int64.of_int(a) and nB = Int64.of_int(b) in
   Int64.pred (Int64.sub nA nB) (*-(b - a + 1) = (a - b - 1)*)
 
+(*zalozenia: l, r to poprawne drzewa o roznicy glebokosci <= 2,
+zachodzi l < k < r*)
 let make l k r = Node (l, k, r, max (height l) (height r) + 1,
-   Int64.add (Int64.add (size l) (size r)) (len k)) (*zalozenia: l, r to poprawne drzewa o roznicy <= 2,
-zachodzi l < k < r, robi z nich avl*)
+   Int64.add (Int64.add (size l) (size r)) (len k))
+(*tworzy z nich drzewo AVL*)
 
-let bal l k r = (*bierze drzewko, zwraca poprawnie zbalansowane, roznica glebokosci na wejsciu <= 3*)
+(*bierze drzewo, zwraca poprawnie zbalansowane, 
+roznica glebokosci na wejsciu <= 3*)
+let bal l k r = 
   let hl = height l and sl = size l in
   let hr = height r and sr = size r in
   if hl > hr + 2 then
@@ -50,18 +90,19 @@ let bal l k r = (*bierze drzewko, zwraca poprawnie zbalansowane, roznica gleboko
           | Empty -> assert false)
     | Empty -> assert false
   else Node (l, k, r, max hl hr + 1, Int64.add (len k) (Int64.add sl sr)) 
+(*zwraca poprawne drzewo o roznicy glebokosci <= 2 w kazdym poddrzewie*)
 
-let rec min_elt = function 
+let rec min_elt = function (*zwraca element najmniejszy w niepustym drzewie*)
   | Node (Empty, k, _, _, _) -> k
   | Node (l, _, _, _, _) -> min_elt l
   | Empty -> raise Not_found
 
-let rec remove_min_elt = function
+let rec remove_min_elt = function (*usuwa element najmniejszy w niepustym drzewie*)
   | Node (Empty, _, r, _, _) -> r
   | Node (l, k, r, _, _) -> bal (remove_min_elt l) k r
   | Empty -> invalid_arg "PSet.remove_min_elt"
 
-let merge t1 t2 = (*bierze 2 drzewa, klucze e1 < klucze e2, zwraca zbalansowane avl z nich*)
+let merge t1 t2 = (*bierze 2 drzewa, klucze t1 < klucze t2, zwraca zbalansowane avl z nich*)
   match t1, t2 with
   | Empty, _ -> t2
   | _, Empty -> t1
@@ -69,15 +110,19 @@ let merge t1 t2 = (*bierze 2 drzewa, klucze e1 < klucze e2, zwraca zbalansowane 
       let k = min_elt t2 in
       bal t1 k (remove_min_elt t2)
 
-let create cmp = { cmp = cmp; set = Empty }
-let empty = { cmp = compare; set = Empty }
+let create cmp = { cmp = cmp; set = Empty } (*tworzy pustego seta z danym komparatorem*)
+let empty = { cmp = compare; set = Empty } (*zbior pusty*)
 
 
 let is_empty x = 
   x.set = Empty
 
-(*warunek przed add_one: dany zbior ma PUSTE przecięcie z przedzialem x*)
-let rec add_one cmp x = function (*zwraca funkcje ktora bierze drzewo i zwraca drzewo z x-em, zbalansowane*)
+(*
+funkcja dodaje przedzial x do drzewa
+warunek przed add_one: dany zbior ma PUSTE przecięcie z przedzialem x
+zlozonosc: log n (operacja elementarna w strukturze)
+*)
+let rec add_one cmp x = function 
   | Node (l, k, r, h, s) ->
       let c = cmp x k in
       if c = 0 then Node (l, x, r, h, s)
@@ -89,7 +134,10 @@ let rec add_one cmp x = function (*zwraca funkcje ktora bierze drzewo i zwraca d
         bal l k nr
   | Empty -> Node (Empty, x, Empty, 1, len x)
 
-let rec join cmp l v r = (*bierze 2 drzewa, klucze l < v < klucze r, zwraca avl zawierające l, r oraz element v*)
+(*
+bierze 2 drzewa, klucze l < v < klucze r, zwraca avl zawierające l, r oraz element v
+zlozonosc: log n (operacja elementarna w strukturze)*)
+let rec join cmp l v r = 
   match (l, r) with
   | (Empty, _) -> add_one cmp v r
   | (_, Empty) -> add_one cmp v l
@@ -98,47 +146,51 @@ let rec join cmp l v r = (*bierze 2 drzewa, klucze l < v < klucze r, zwraca avl 
       if rh > lh + 2 then bal (join cmp l v rl) rv rr else
       make l v r
 
-
+(*bierze liczbe x i seta, zwraca (lewe, czy, prawe) gdzie lewe < x < prawe oraz czy: czy x nalezy
+do zbioru oraz lewe - zbior elementow seta mniejszych od x, prawe - zbior elementow seta wiekszych od x
+zlozonosc: log n (operacja elementarna w strukturze)*)
 let split x { cmp = cmp; set = set } = 
   let inside x (l, r) = (x >= l) && (x <= r) in
-  let rec loop x = function (*bierze liczbe x i drzewo, zwraca (lewe, czy, prawe) gdzie lewe < x < prawe oraz czy: czy x wystepuje*)
-      Empty ->
-        (Empty, false, Empty)
+  
+  let rec loop x = function 
+    |Empty ->
+      (Empty, false, Empty)
     | Node (l, v, r, _, _) ->
-        let c = cmp (x, x) v in
-        if inside x v then 
-          let left = if(fst v < x) then (add_one cmp (fst v, x - 1) l) else l and
-              right = if(snd v > x) then (add_one cmp (x + 1, snd v) r) else r in
-          (left, true, right)
-        else if c < 0 then
-          let (ll, pres, rl) = loop x l in (ll, pres, join cmp rl v r)
-        else
-          let (lr, pres, rr) = loop x r in (join cmp l v lr, pres, rr)
+      let c = cmp (x, x) v in
+      if inside x v then 
+        let left = if(fst v < x) then (add_one cmp (fst v, x - 1) l) else l and
+            right = if(snd v > x) then (add_one cmp (x + 1, snd v) r) else r in
+        (left, true, right)
+      else if c < 0 then
+        let (ll, pres, rl) = loop x l in (ll, pres, join cmp rl v r)
+      else
+        let (lr, pres, rr) = loop x r in (join cmp l v lr, pres, rr)
   in
   let setl, pres, setr = loop x set in
   { cmp = cmp; set = setl }, pres, { cmp = cmp; set = setr }
 
-let remove x { cmp = cmp; set = set } =
+let remove x { cmp = cmp; set = set } = (*zwraca roznice zbioru set oraz przedzialu x*)
   let (l, _, _) = split (fst x) { cmp = cmp; set = set } in 
   let (_, _, r) = split (snd x) { cmp = cmp; set = set } in
   { cmp = cmp; set = (merge l.set r.set) }
 
 
-let add x { cmp = cmp; set = set } = (*bierze seta i zwraca seta z dodanym x*)
+let add x { cmp = cmp; set = set } = (*dodaje x do zbioru*)
   { cmp = cmp; set = add_one cmp x (remove x { cmp = cmp; set = set }).set}
 
-let below x { cmp = cmp; set = set } = 
+let below x { cmp = cmp; set = set } = (*liczba elementow zbioru nie wiekszych niz x*)
   let (l, _, _) = if x < max_int then split (x + 1) { cmp = cmp; set = set } else
-   ({ cmp = cmp; set = set }, false, empty) in (*case gdy x = max_int i nie mozna dodac 1*) 
+   ({ cmp = cmp; set = set }, false, empty) in (*przypadek brzegowy gdy x = max_int i nie mozna dodac 1*) 
   let cnt = size (l.set) in 
     if (Int64.neg (Int64.of_int(max_int)) < cnt) then Int64.to_int(Int64.neg cnt) 
     else max_int
 
-let mem x { cmp = cmp; set = set } = 
+let mem x { cmp = cmp; set = set } = (*czy x nalezy do zbioru*)
   let (_, ans, _) = split x { cmp = cmp; set = set } in ans
 
 let exists = mem
 
+(*lista elementow zbioru w kolejnosci inorder: zlozonosc O(n) gdzie n to rozmiar seta*)
 let elements { set = set } = 
   let rec loop acc = function
     | Empty -> acc
@@ -151,9 +203,11 @@ let elements { set = set } =
     in
   loop [] set
 
+(*wykonuje f na kazdym elemencie zbioru w kolejnosci inorder*)
 let iter f { set = set } =
   List.iter f (elements { cmp = compare; set = set })
 
+(*sklada funkcje f na przedzialach ze zbioru w kolejnosci inorder*)
 let fold f { cmp = cmp; set = set } acc =
   let remap f a b  = f b a in
   List.fold_left (remap f) acc (elements { cmp = cmp; set = set })
