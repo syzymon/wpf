@@ -224,7 +224,7 @@ let fold f { cmp = cmp; set = set } acc =
   let remap f a b  = f b a in
   List.fold_left (remap f) acc (elements { cmp = cmp; set = set })
 
-
+(* ZBIOR TESTOW 
 
 (* ADD/BELOW *)
 let a = empty
@@ -252,11 +252,12 @@ assert(is_empty (remove (1, 20) s));;
 assert(mem 7 (remove (8, 15) s));;
 
 (* ELEMENTS *)
-assert(elements (add (1, 2) (add (3, 7) (add (14, 88) (add (88, 2137) empty))))
-        = [(1, 2); (3, 7); (14, 88); (89, 2137)]);;
+assert(elements (add (1, 2) (add (3, 7) empty))
+        = [(1, 7)]);;
 
 (* FOLD *)
 let s = add (1, 1) (add (11, 14) (add (6, 9) (add (4, 5) empty)));;
 let func x a = x::a;;
 assert(fold func s [] = [(11, 14); (4, 9); (1, 1)]);;
 
+*)
