@@ -32,8 +32,9 @@ w dowolnym poddrzewie sa rozlaczne, ale moga sie stykac np. [1,2] oraz [3,4]
 moga byc przedzialami roznych wierzcholkow ale [1,3] oraz [2,4] juz nie
 
 Na operacje elementarne skladaja sie funkcje add_one, join oraz split. 
-Ich zlozonosc wynosi O(log n). Wszystkie pozostale operacje wykonujemy
-za pomoca elementarnych lub w widocznym czasie log n lub stalym.
+Ich zlozonosc wynosi O(log n). Wszystkie pozostale operacje (poza
+wypisywaniem calej struktury) wykonujemy za pomoca op. elementarnych lub 
+w widocznym czasie log n lub stalym.
 *)
 type 'k set = 
   | Empty
@@ -102,7 +103,8 @@ let rec remove_min_elt = function (*usuwa element najmniejszy w niepustym drzewi
   | Node (l, k, r, _, _) -> bal (remove_min_elt l) k r
   | Empty -> invalid_arg "PSet.remove_min_elt"
 
-let merge t1 t2 = (*bierze 2 drzewa, klucze t1 < klucze t2, zwraca zbalansowane avl z nich*)
+let merge t1 t2 = (*bierze 2 drzewa, klucze t1 < klucze t2, zwraca jedno drzewo z nich
+jesli wysokosci t1 i t2 roznia sie o wiecej niz 3, wynik moze NIE BYC zbalansowany!!!*)
   match t1, t2 with
   | Empty, _ -> t2
   | _, Empty -> t1
@@ -169,10 +171,20 @@ let split x { cmp = cmp; set = set } =
   let setl, pres, setr = loop x set in
   { cmp = cmp; set = setl }, pres, { cmp = cmp; set = setr }
 
+(*bierze 2 drzewa, klucze t1 < klucze t2, zwraca zbalansowane drzewo z nich,
+robi to samo co funkcja merge ale dla dowolnych t1 i t2 zwroci dobre drzewo*)
+let quickMerge cmp t1 t2 = 
+  match t1, t2 with
+  | Empty, _ -> t2
+  | _, Empty -> t1
+  | _ ->
+      let k = min_elt t2 in
+      join cmp t1 k (remove_min_elt t2)
+  
 let remove x { cmp = cmp; set = set } = (*zwraca roznice zbioru set oraz przedzialu x*)
   let (l, _, _) = split (fst x) { cmp = cmp; set = set } in 
   let (_, _, r) = split (snd x) { cmp = cmp; set = set } in
-  { cmp = cmp; set = (merge l.set r.set) }
+  { cmp = cmp; set = (quickMerge cmp l.set r.set) }
 
 
 let add x { cmp = cmp; set = set } = (*dodaje x do zbioru*)
@@ -211,3 +223,40 @@ let iter f { set = set } =
 let fold f { cmp = cmp; set = set } acc =
   let remap f a b  = f b a in
   List.fold_left (remap f) acc (elements { cmp = cmp; set = set })
+
+
+
+(* ADD/BELOW *)
+let a = empty
+let a = add (17, 20) a
+let a = add (5, 8) a
+let a = add (1, 2) a
+let a = add (10, 12) a
+let a = add (28, 35) a
+let a = add (22, 23) a
+let a = add (40, 43) a
+let a = add (37, 37) a;;
+
+assert((is_empty a) = false);;
+assert(mem 29 a);;
+assert(mem 21 a = false);;
+assert(mem 38 a = false);;
+assert(mem 37 a);;
+assert(below 8 a = below 9 a);;
+assert(below 29 a = 17);;
+
+(* REMOVE *)
+let s = add (1, 1) (add (15, 16) (add (10, 14) (add (6, 9) empty)));;
+assert((mem 10 (remove (10, 10) s)) = false);;
+assert(is_empty (remove (1, 20) s));;
+assert(mem 7 (remove (8, 15) s));;
+
+(* ELEMENTS *)
+assert(elements (add (1, 2) (add (3, 7) (add (14, 88) (add (88, 2137) empty))))
+        = [(1, 2); (3, 7); (14, 88); (89, 2137)]);;
+
+(* FOLD *)
+let s = add (1, 1) (add (11, 14) (add (6, 9) (add (4, 5) empty)));;
+let func x a = x::a;;
+assert(fold func s [] = [(11, 14); (4, 9); (1, 1)]);;
+
