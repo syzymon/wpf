@@ -153,7 +153,6 @@ do zbioru oraz lewe - zbior elementow seta mniejszych od x, prawe - zbior elemen
 zlozonosc: log n (operacja elementarna w strukturze)*)
 let split x { cmp = cmp; set = set } = 
   let inside x (l, r) = (x >= l) && (x <= r) in
-  
   let rec loop x = function 
     |Empty ->
       (Empty, false, Empty)
