@@ -29,7 +29,11 @@ let rec topol l =
     List.iter (
       fun (a, b) -> 
         let nrA = find a !mapa in 
-        List.iter (fun x -> sasiedzi.(nrA) <- (find x !mapa) :: sasiedzi.(nrA)) b) l 
+        List.iter (
+          fun x -> 
+            sasiedzi.(nrA) <- (find x !mapa) :: sasiedzi.(nrA)
+        ) b
+    ) l 
   in
   tworz_liste l;
 
