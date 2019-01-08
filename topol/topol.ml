@@ -3,7 +3,7 @@ open PMap;;
 
 exception Cykliczne
 
-let rec topol l =
+let topol l =
   let mapa = ref empty in (*mapa w ktorej przypisujemy wierzcholkom liczby naturalne*)
   let odwrotnosc = ref empty in (*odwrotna mapa z liczb naturalnych w oryginalne wierzcholki*)
   let n = ref 0 in (*aktualna liczba przetworzonych roznych wierzcholkow*)
