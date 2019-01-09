@@ -57,3 +57,51 @@ let topol l =
   done;
 
   !stos;;
+
+
+
+(*ZBIOR TESTOW*)
+(*
+let sprawdz_cykl l =
+  match (try (topol l) with
+     Cykliczne -> []) with
+        | [] -> true
+        | _ -> false
+
+let testuj we wy =
+  let rec loop a b f = function
+      | [] -> false
+      | h::t -> 
+        if f then 
+            if h = b then true 
+            else loop a b f t
+        else if h = a then loop a b true t 
+            else loop a b f t
+  and pom i a = function
+      | [] -> (match i with
+        | [] -> true
+        | g::o -> pom o (fst g) (snd g))
+      | h::t -> match (loop a h false wy) with
+        | true -> pom i a t
+        | false -> false in
+  pom (List.tl we) (fst (List.hd we)) (snd (List.hd we))
+
+let a = [(1, [2]); (2, [3]); (3, [4]); (4, [1])]
+let b = [(1, [2]); (2, [3]); (3, [4])]
+let c = [('A', ['B'; 'C'; 'E']); ('D', ['F'; 'E'; 'G']); ('B', ['C'; 'D']);
+   ('C', ['D'; 'F']); ('F', ['G'; 'H'])]
+let d = [("blep", ["abc"; "eee"; "nghu"]); ("eee", ["nghu"]); 
+   ("nghu", []); ("42", ["2137"; "blep"; "abc"; "nghu"])]
+let e = [(1, [2; 5; 8; 3]); (5, [8; 6; 4; 7]); (7, [6; 9; 2]); (8, [6; 9; 3])];;
+
+assert(sprawdz_cykl a);
+assert(not (sprawdz_cykl b));
+assert(testuj b (topol b));
+assert(testuj c (topol c));
+assert(testuj (List.tl c) (topol (List.tl c)));
+assert(testuj d (topol d));
+assert(testuj e (topol e));
+assert(testuj (List.tl e) (topol (List.tl e)));
+assert(testuj (b @ e) (topol (b @ e)));
+assert(testuj (List.tl b @ e) (topol (List.tl b @ e)))
+*)
